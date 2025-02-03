@@ -16,102 +16,189 @@ It is part of the **HNG TECH Internship - Stage 1** DevOps project.
 
 ---
 
-## 📌 API Specification
+# **🔧 Provisioning AWS EC2 and Setting Up the Environment**
 
-### **Endpoint:**  
-**GET** `/api/classify-number?number=371`  
+## **📌 Step 1: Create an AWS EC2 Instance**
 
-### **Response Format (200 OK)**:
-```json
-{
-    "number": 371,
-    "is_prime": false,
-    "is_perfect": false,
-    "properties": ["armstrong", "odd"],
-    "class_sum": 11,
-    "fun_fact": "371 is an Armstrong number because 3^3 + 7^3 + 1^3 = 371"
-}
+1. **Log in to AWS Console** and go to **EC2 Dashboard**.
+2. Click **Launch Instance**.
+3. Choose **Ubuntu 22.04 LTS (recommended)**.
+4. Select **Instance Type** (e.g., `t2.micro` for free tier).
+5. Click **Next: Configure Security Group**.
+
+---
+
+## **📌 Step 2: Configure Security Group (Allow Port 5000)**
+1. In the **Security Group** settings, click **Edit inbound rules**.
+2. Add a new rule:
+   - **Type:** Custom TCP Rule
+   - **Port Range:** `5000`
+   - **Source:** `Anywhere (0.0.0.0/0, ::/0)`
+3. Click **Save Rules**.
+
+This allows external access to Flask API running on port 5000.
+
+---
+
+## **📌 Step 3: Connect to EC2 Instance**
+Once your EC2 instance is running, connect to it using SSH:
+
+```bash
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
 ```
 
-### **Response Format (400 Bad Request)**:
-```json
-{
-    "number": "alphabet",
-    "error": true
-}
+- Replace `your-key.pem` with your actual key file.
+- Replace `your-ec2-public-ip` with your actual EC2 Public IP.
+
+---
+
+## **📌 Step 4: Prepare the EC2 Environment for Python**
+
+Run the following commands to install **Python and dependencies**:
+
+```bash
+# Update and install Python
+sudo apt update -y
+sudo apt install python3 python3-pip python3-venv git -y
+
+# Verify Python installation
+python3 --version
+pip3 --version
 ```
 
 ---
 
-## 📌 Installation & Running Locally
+## **📌 Step 5: Clone the Project into EC2**
 
-### **Step 1: Install Dependencies**
+Clone the GitHub repository where the project is stored:
+
 ```bash
-pip install flask flask-cors requests
+git clone https://github.com/your-username/number-classification-api.git
+cd number-classification-api
 ```
 
-### **Step 2: Run the API**
+---
+
+## **📌 Step 6: Set Up a Virtual Environment and Install Dependencies**
+
+```bash
+# Create a virtual environment
+python3 -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Install required dependencies
+pip install -r requirements.txt
+```
+
+Verify installation:
+
+```bash
+pip list | grep flask
+```
+
+---
+
+## **📌 Step 7: Run the Flask API**
+
+Run the API with:
+
 ```bash
 python numberapi.py
 ```
 
-### **Step 3: Test the API**
-Use **Postman** or **Curl** to test the API:
+If everything is correct, you should see:
 
-```bash
-curl -X GET "http://127.0.0.1:5000/api/classify-number?number=371"
+```
+ * Running on http://0.0.0.0:5000/
 ```
 
 ---
 
-## 🚀 Deploying to AWS EC2
+## **📌 Step 8: Allow External Traffic on Port 5000**
 
-### **Step 1: Connect to Your EC2 Instance**
+If the API is not accessible, disable the firewall:
+
 ```bash
-ssh -i your-key.pem ubuntu@your-ec2-instance-ip
+sudo ufw disable
 ```
 
-### **Step 2: Install Python & Dependencies**
+Test your API:
+
 ```bash
-sudo apt update -y
-sudo apt install python3 python3-pip -y
-pip3 install flask flask-cors requests
+curl -X GET "http://your-ec2-public-ip:5000/api/classify-number?number=371"
 ```
 
-### **Step 3: Upload & Run API**
-```bash
-scp -i your-key.pem numberapi.py ubuntu@your-ec2-instance-ip:~/
-ssh -i your-key.pem ubuntu@your-ec2-instance-ip
-python3 numberapi.py
-```
+---
 
-### **Step 4: Allow External Access to Port 5000**
-```bash
-sudo ufw allow 5000
-```
+## **📌 Step 9: Keep API Running in Background**
 
-### **Step 5: Keep API Running in Background**
+To keep the Flask app running after logout:
+
 ```bash
 nohup python3 numberapi.py > output.log 2>&1 &
 ```
 
-### **Step 6: Test Public API**
+Or use **tmux**:
+
 ```bash
-curl -X GET "http://your-ec2-instance-ip:5000/api/classify-number?number=371"
+tmux
+python3 numberapi.py
+```
+
+Press **`CTRL + B`, then `D`** to detach.
+
+---
+
+## **📌 Step 10: Automate API Restart on Server Reboot**
+
+Create a systemd service:
+
+```bash
+sudo nano /etc/systemd/system/numberapi.service
+```
+
+Paste this:
+
+```
+[Unit]
+Description=Number API
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/ubuntu/number-classification-api/numberapi.py
+WorkingDirectory=/home/ubuntu/number-classification-api
+Restart=always
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Save (`CTRL + X`, then `Y`, then `ENTER`).
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable numberapi
+sudo systemctl start numberapi
+```
+
+Check status:
+
+```bash
+sudo systemctl status numberapi
 ```
 
 ---
 
-## 📌 Example Screenshots
-*(Add your API screenshots here)*
-
----
-
-## ✅ Final Checklist Before Submission
+## **✅ Final Checklist Before Submission**
 ✔ **API is running & accessible via public URL**  
 ✔ **Tested with different inputs**  
 ✔ **GitHub repository is public**  
 ✔ **README.md updated with setup instructions**  
-✔ **Submitted in `#stage-one-devops`**  
+  
 
-🚀 **Your API is now LIVE on AWS EC2!** 🎯  
+🚀 **API is now LIVE on AWS EC2!** 🎯 
